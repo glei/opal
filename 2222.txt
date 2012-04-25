@@ -1,0 +1,3 @@
+make DEBUG_BUILD=no OPAL_SHARED_LIB=0
+[CC] src/h460/h4601.cxx
+[AR] lib_Darwin_arm/libopal_s.a
