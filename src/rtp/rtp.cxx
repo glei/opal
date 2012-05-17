@@ -1491,12 +1491,19 @@ void OpalRTPSession::GetStatistics(OpalMediaStatistics & statistics, bool receiv
 }
 #endif
 
-
+#define CHANGEPERFRAMETIME 50  // 2012.05.16 kou add
+#define CURFRAMERATE 12        // 2012.05.16 kou add
+int changeRate = 3;
+int changeLivel = 1;
 static OpalRTPSession::ReceiverReportArray
 BuildReceiverReportArray(const RTP_ControlFrame & frame, PINDEX offset)
 {
+  if (changeRate < 3)
+  {
+    changeRate = 3;
+  }
   OpalRTPSession::ReceiverReportArray reports;
-
+  int tmprate =0;  // 2012.05.16 kou add
   const RTP_ControlFrame::ReceiverReport * rr = (const RTP_ControlFrame::ReceiverReport *)(frame.GetPayloadPtr()+offset);
   for (PINDEX repIdx = 0; repIdx < (PINDEX)frame.GetCount(); repIdx++) {
     OpalRTPSession::ReceiverReport * report = new OpalRTPSession::ReceiverReport;
@@ -1509,6 +1516,61 @@ BuildReceiverReportArray(const RTP_ControlFrame & frame, PINDEX offset)
     report->delay = ((PInt64)rr->dlsr << 16)/1000;
     reports.SetAt(repIdx, report);
     rr++;
+  // PTRACE(1, "RTP\trtp->report->fractionLost is  " << report->fractionLost);    
+    // 2012.05.16 kou add net状況調整対応
+    tmprate = changeRate;
+    if(report->fractionLost < CHANGEPERFRAMETIME/2)
+    {
+      if(changeRate < CURFRAMERATE)//ネート流量が正常
+      {
+        tmprate += 1;
+      }
+      else
+      {
+        tmprate = CURFRAMERATE;
+      }
+      changeLivel = 1;
+      
+    }
+    else if(report->fractionLost >= CHANGEPERFRAMETIME/2 && report->fractionLost < CHANGEPERFRAMETIME)//ネート流量がやや悪い
+    {
+      if(changeRate < CURFRAMERATE  && changeRate <=10)
+      {
+        tmprate += 1;
+      }
+      changeLivel = 2;
+    }
+    else if(report->fractionLost >= CHANGEPERFRAMETIME && report->fractionLost < CHANGEPERFRAMETIME*2)//ネート流量が悪い
+    {
+      if(changeRate <= CURFRAMERATE && changeRate >= 3)
+      {
+        tmprate -=1;
+      }
+      changeLivel = 3;
+    }
+    else if(report->fractionLost >= CHANGEPERFRAMETIME*2 && report->fractionLost < CHANGEPERFRAMETIME*3)//ネート流量が普通悪い
+    {
+      if(changeRate <= CURFRAMERATE && changeRate >=3)
+      {
+        tmprate = tmprate - 2;
+      }
+      changeLivel = 4;
+    }
+    else if(report->fractionLost >= CHANGEPERFRAMETIME*3)//ネート流量がとても悪い
+    {
+      if(changeRate <= CURFRAMERATE && changeRate >=2)
+      {
+        tmprate = tmprate/2;
+      }
+      changeLivel = 5;
+    }
+    if(tmprate == 0)
+    {
+      tmprate = 1;
+    }
+    changeRate = tmprate;
+    // PTRACE(1, "RTP\trtp->changeRate is  " << changeRate);
+    // 2012.05.16 kou add end 
   }
 
   return reports;
