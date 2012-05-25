@@ -366,7 +366,10 @@ OpalMessageBuffer::OpalMessageBuffer(OpalMessageType type)
 OpalMessageBuffer::~OpalMessageBuffer()
 {
   if (m_data != NULL)
+  {
     free(m_data);
+    m_data = NULL;
+  }
 }
 
 

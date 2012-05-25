@@ -259,6 +259,12 @@ PBoolean H46018Transport::HandleH46018SignallingChannelPDU()
 PBoolean H46018Transport::WritePDU( const PBYTEArray & pdu )
 {
   PWaitAndSignal m(WriteMutex);
+  // for (int i = 0; i < pdu.GetSize(); i++)
+  // {
+  //   (const_cast<PBYTEArray &>(pdu))[i] ^= 0x5A;
+  // }
+   // PTRACE(1, "H46018\tpdu is %d."<<pdu);
+
   return OpalTransportTCP::WritePDU(pdu);
 
 }
@@ -266,7 +272,19 @@ PBoolean H46018Transport::WritePDU( const PBYTEArray & pdu )
 
 PBoolean H46018Transport::ReadPDU(PBYTEArray & pdu)
 {
-  return OpalTransportTCP::ReadPDU(pdu);
+    PBoolean result = OpalTransportTCP::ReadPDU(pdu);
+  if (result)
+  {
+    if (pdu[1] != 2) {
+    // PTRACE(1, "H46018\tpdu is %d."<<pdu);
+    for (int i = 0; i < pdu.GetSize(); i++)
+    {
+      pdu[i] ^= 0x5A;
+    }
+    }
+  }
+    return result;
+   // return OpalTransportTCP::ReadPDU(pdu);
 }
 
 
@@ -308,6 +326,12 @@ PBoolean H46018Transport::InitialPDU(const OpalGloballyUniqueID & callIdentifier
   PBYTEArray rawData;
   pdu.GetQ931().Encode(rawData);
 
+// kou add
+  for (int i = 0; i < rawData.GetSize(); i++)
+  {
+    (const_cast<PBYTEArray &>(rawData))[i] ^= 0x5A;
+  }
+// kou add
   if (!WritePDU(rawData)) {
     PTRACE(3, "H46018\tError Writing PDU.");
     return false;
