@@ -1326,6 +1326,7 @@ PBoolean OpalVideoMediaStream::ReadData(BYTE * data, PINDEX size, PINDEX & lengt
       stream->ExecuteCommand(OpalVideoUpdatePicture());
   }
 */
+  // PTRACE(1, "Media\tsend video start");
   return true;
 }
 
